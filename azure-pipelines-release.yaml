@@ -4,10 +4,13 @@ trigger:
      - main # Trigger on commits to the main branch
 
 variables:
-resourceGroup: "contosoair" # Azure Resource Group
-location: "East US" # Azure location
-appServiceName: "contosoair-webapp-${{ variables.buildId }}" # Unique App Service Name
-buildId: "$(Build.BuildId)" # Build ID variable
+  resourceGroup: "Mosaic-PoC" # Azure Resource Group
+  location: "South India" # Azure location
+  appServiceName: "contosoair-webapp-${{ variables.buildId }}" # Unique App Service Name
+  buildId: "$(Build.BuildId)" # Build ID variable
+
+pool: 
+  name:'azureagent' 
 
 stages:
   - stage: Deploy
@@ -16,29 +19,28 @@ stages:
       - job: DeployResources
         displayName: "Deploy ARM Template"
         steps:
-          # Install Azure CLI
-          - task: UsePythonVersion@1
-          inputs:
-            versionSpec: '3.x'
-            addToPath: true
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.x'
+              addToPath: true
           - task: AzureCLI@2
-          inputs:
-            azureSubscription: "MyServicePrincipalConnection"
-            scriptType: bash
-            scriptLocation: inlineScript
-            inlineScript: |
-              az group create --name $(resourceGroup) --location $(location)
-              az deployment group create \
-                --resource-group $(resourceGroup) \
-                --template-file "$(System.DefaultWorkingDirectory)/_ContosoAir-CI/drop/Templates/azuredeploy.json" \
-                --parameters "$(System.DefaultWorkingDirectory)/_ContosoAir-CI/drop/Templates/azuredeploy.parameters.json" \
-                --parameters appServiceName=$(appServiceName)
+            inputs:
+              azureSubscription: "serviceconnection"
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az group create --name $(resourceGroup) --location $(location)
+                az deployment group create \
+                  --resource-group $(resourceGroup) \
+                  --template-file "$(System.DefaultWorkingDirectory)/_ContosoAir-CI/drop/Templates/azuredeploy.json" \
+                  --parameters "$(System.DefaultWorkingDirectory)/_ContosoAir-CI/drop/Templates/azuredeploy.parameters.json" \
+                  --parameters appServiceName=$(appServiceName)
       - job: DeployApp
-      displayName: "Deploy Application"
-      dependsOn: DeployResources
-      steps:
-        - task: AzureWebApp@1
-        inputs:
-        azureSubscription: "MyServicePrincipalConnection"
-        appName: "$(appServiceName)"
-        package: "$(System.DefaultWorkingDirectory)/_ContosoAir-CI/drop/package.zip"
+        displayName: "Deploy Application"
+        dependsOn: DeployResources
+        steps:
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: "MyServicePrincipalConnection"
+              appName: "$(appServiceName)"
+              package: "$(System.DefaultWorkingDirectory)/_ContosoAir-CI/drop/package.zip"
